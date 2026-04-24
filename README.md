@@ -1,4 +1,23 @@
-# Prometheus WireGuard Exporter
+# Prometheus WireGuard Exporter — `reloaded` fork
+
+> **This is a fork.** Upstream is [`MindFlavor/prometheus_wireguard_exporter`](https://github.com/MindFlavor/prometheus_wireguard_exporter), archived in 2022-11. All credit for the original exporter goes to [Francesco Cogno](https://github.com/MindFlavor) and the contributors listed in upstream history.
+>
+> The fork exists to support [`wg-easy`](https://github.com/wg-easy/wg-easy) deployments, where peer names live in `wg0.json` rather than `# friendly_name=` comments inside `wg0.conf`. Without this change, every Prometheus series on a wg-easy install is labelled by raw public_key only, which makes Grafana legends unusable.
+>
+> ### What this fork adds over upstream `3.6.6`
+>
+> - **`-j` / `--wg_easy_config_files` flag** (env: `PROMETHEUS_WIREGUARD_EXPORTER_WG_EASY_CONFIG_FILES`). Takes one or more wg-easy `wg0.json` paths. Peer names from these files populate the same `friendly_name` Prometheus label that `-n` already emits — no new label, no schema bump.
+> - **Merge order** with `-n`: explicit `# friendly_name=` comments in `wg0.conf` win over `wg0.json` names, so a hand-edited override in the conf isn't overwritten by the wg-easy state file.
+>
+> ### Image
+>
+> Published to GitHub Container Registry: `ghcr.io/reloaded/prometheus_wireguard_exporter:3.6.6-wg-easy.1` (multi-arch — same platform list as upstream).
+>
+> ### Versioning
+>
+> `<upstream>-wg-easy.<n>` semver pre-release tags. Bump `<n>` per fork-side change; rebase onto upstream and bump `<upstream>` when upstream cuts a new release. The `crates.io` badges below still point at upstream — this fork is not published to crates.io.
+>
+> ---
 
 [![legal](https://img.shields.io/github/license/mindflavor/prometheus_wireguard_exporter.svg)](LICENSE) ![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)
 
