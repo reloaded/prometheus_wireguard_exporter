@@ -95,11 +95,24 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=match,pattern=^(\d+\.\d+\.\d+-wg-easy\.\d+)$,group=1
 
+      # Platform matrix: limited to amd64 + arm64 because the
+      # `rust:1-alpine*` base image is only published for those
+      # two architectures (plus ppc64le, which isn't useful here).
+      # Restoring the full upstream `386 / arm/v6 / arm/v7` matrix
+      # would require either:
+      #   - bringing back the musl.cc cross-toolchain dance (which
+      #     is unreliable — the service serves HTML errors that
+      #     break tar-extraction), or
+      #   - installing apt-packaged cross-toolchains
+      #     (gcc-aarch64-linux-gnu etc.) on a Debian-based builder
+      #     and emitting glibc-dynamic binaries (no static musl).
+      # If the consumer cluster needs one of those archs, swap to
+      # the Debian-cross approach.
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v6,linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
