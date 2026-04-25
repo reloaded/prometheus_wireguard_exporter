@@ -6,6 +6,7 @@ pub(crate) struct Options {
     pub prepend_sudo: bool,
     pub separate_allowed_ips: bool,
     pub extract_names_config_files: Option<Vec<String>>,
+    pub wg_easy_config_files: Option<Vec<String>>,
     pub interfaces: Option<Vec<String>>,
     pub export_remote_ip_and_port: bool,
     pub export_latest_handshake_delay: bool,
@@ -19,6 +20,9 @@ impl Options {
             separate_allowed_ips: *matches.get_one("separate_allowed_ips").unwrap_or(&false),
             extract_names_config_files: matches
                 .get_many("extract_names_config_files")
+                .map(|e: ValuesRef<'_, String>| e.into_iter().map(|a| a.to_owned()).collect()),
+            wg_easy_config_files: matches
+                .get_many("wg_easy_config_files")
                 .map(|e: ValuesRef<'_, String>| e.into_iter().map(|a| a.to_owned()).collect()),
             interfaces: matches
                 .get_many("interfaces")

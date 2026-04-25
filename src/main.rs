@@ -14,10 +14,11 @@ pub use friendly_description::*;
 use wireguard::WireGuard;
 mod exporter_error;
 mod wireguard_config;
+mod wg_easy_config;
 use prometheus_exporter_base::render_prometheus;
 use std::net::IpAddr;
 use std::sync::Arc;
-use wireguard_config::peer_entry_hashmap_try_from;
+use wireguard_config::{peer_entry_hashmap_try_from, PeerEntryHashMap};
 
 async fn perform_request(
     _req: Request<Body>,
@@ -42,10 +43,48 @@ async fn perform_request(
         .with_context(|| "failed to read peer config file")? // bail out if there was an error
         .map(|strings| strings.join("\n")); // now join the strings in a new string
 
-    let peer_entry_hashmap = peer_entry_contents
+    // wg-easy stores peer names in `wg0.json`, not as `# friendly_name=`
+    // comments inside `wg0.conf`. Read each json file once into an
+    // owned `serde_json::Value` (so the lifetimes work — the
+    // `PeerEntryHashMap` will borrow `publicKey`/`name` strings out
+    // of these values).
+    //
+    // Declared *before* the hashmap is built so the borrow checker
+    // can unify both source-data lifetimes when entries from
+    // `peer_entry_contents` and `wg_easy_values` populate the same
+    // map — `PeerEntryHashMap<'a>` is invariant in `'a`.
+    let wg_easy_values: Option<Vec<serde_json::Value>> = options
+        .wg_easy_config_files
         .as_ref()
-        .map(|contents| peer_entry_hashmap_try_from(contents))
+        .map(|files| {
+            files
+                .iter()
+                .map(|file| -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
+                    let raw = std::fs::read_to_string(file as &str)
+                        .with_context(|| format!("failed to read wg-easy config file {}", file))?;
+                    let v = serde_json::from_str::<serde_json::Value>(&raw)
+                        .with_context(|| format!("failed to parse wg-easy config file {} as JSON", file))?;
+                    Ok(v)
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })
         .transpose()?;
+
+    let peer_entry_hashmap: Option<PeerEntryHashMap> =
+        if peer_entry_contents.is_some() || wg_easy_values.is_some() {
+            let mut hm = match peer_entry_contents.as_ref() {
+                Some(contents) => peer_entry_hashmap_try_from(contents)?,
+                None => PeerEntryHashMap::new(),
+            };
+            if let Some(values) = wg_easy_values.as_ref() {
+                for value in values {
+                    wg_easy_config::merge_into(&mut hm, value);
+                }
+            }
+            Some(hm)
+        } else {
+            None
+        };
 
     trace!("peer_entry_hashmap == {:#?}", peer_entry_hashmap);
 
@@ -177,6 +216,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .num_args(0..)
                 .env("PROMETHEUS_WIREGUARD_EXPORTER_CONFIG_FILE_NAMES")
                 .help("If set, the exporter will look in the specified WireGuard config file for peer names (must be in [Peer] definition and be a comment). Multiple files are supported.")
+                .use_value_delimiter(false))
+        .arg(
+            Arg::new("wg_easy_config_files")
+                .short('j')
+                .long("wg_easy_config_files")
+                .num_args(0..)
+                .env("PROMETHEUS_WIREGUARD_EXPORTER_WG_EASY_CONFIG_FILES")
+                .help("If set, the exporter will read peer names from wg-easy's wg0.json files. Names from wg0.json populate the same `friendly_name` Prometheus label that --extract_names_config_files emits. Multiple files are supported. Combines with --extract_names_config_files: explicit `# friendly_name=` comments in wg0.conf win over wg0.json names.")
                 .use_value_delimiter(false))
         .arg(
             Arg::new("interfaces")

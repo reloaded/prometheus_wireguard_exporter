@@ -1,15 +1,15 @@
 [package]
 name                     = "prometheus_wireguard_exporter"
-version                  = "3.6.6"
-authors                  = ["Francesco Cogno <francesco.cogno@outlook.com>"]
-description              = "Prometheus WireGuard Exporter"
+version                  = "3.6.6-wg-easy.1"
+authors                  = ["Francesco Cogno <francesco.cogno@outlook.com>", "reloaded fork maintainers"]
+description              = "Prometheus WireGuard Exporter (reloaded fork — adds wg-easy wg0.json support)"
 edition                  = "2018"
 
 readme                   = "README.md"
 license                  = "MIT"
-repository               = "https://github.com/MindFlavor/prometheus_wireguard_exporter"
-documentation            = "https://github.com/MindFlavor/prometheus_wireguard_exporter"
-homepage                 = "https://github.com/MindFlavor/prometheus_wireguard_exporter"
+repository               = "https://github.com/reloaded/prometheus_wireguard_exporter"
+documentation            = "https://github.com/reloaded/prometheus_wireguard_exporter"
+homepage                 = "https://github.com/reloaded/prometheus_wireguard_exporter"
 
 keywords                 = ["prometheus", "exporter", "wireguard"]
 categories               = ["database"]
